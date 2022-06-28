@@ -396,11 +396,11 @@ endef
 	if ! $(QMK_BIN) hello 1> /dev/null 2>&1; then printf "$(MSG_PYTHON_MISSING)"; exit 1; fi
 	# Check if the submodules are dirty, and display a warning if they are
 ifndef SKIP_GIT
-	if [ ! -e lib/chibios ]; then git submodule sync lib/chibios && git submodule update --depth 50 --init lib/chibios; fi
-	if [ ! -e lib/chibios-contrib ]; then git submodule sync lib/chibios-contrib && git submodule update --depth 50 --init lib/chibios-contrib; fi
-	if [ ! -e lib/lufa ]; then git submodule sync lib/lufa && git submodule update --depth 50 --init lib/lufa; fi
-	if [ ! -e lib/vusb ]; then git submodule sync lib/vusb && git submodule update --depth 50 --init lib/vusb; fi
-	if [ ! -e lib/printf ]; then git submodule sync lib/printf && git submodule update --depth 50 --init lib/printf; fi
+	if [ ! -e lib/chibios ]; then git submodule sync lib/chibios && git submodule update --depth 1 --init lib/chibios; fi
+	if [ ! -e lib/chibios-contrib ]; then git submodule sync lib/chibios-contrib && git submodule update --depth 1 --init lib/chibios-contrib; fi
+	if [ ! -e lib/lufa ]; then git submodule sync lib/lufa && git submodule update --depth 1 --init lib/lufa; fi
+	if [ ! -e lib/vusb ]; then git submodule sync lib/vusb && git submodule update --depth 1 --init lib/vusb; fi
+	if [ ! -e lib/printf ]; then git submodule sync lib/printf && git submodule update --depth 1 --init lib/printf; fi
 	git submodule status --recursive 2>/dev/null | \
 	while IFS= read -r x; do \
 		case "$$x" in \
