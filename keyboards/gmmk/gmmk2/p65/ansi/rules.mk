@@ -7,6 +7,10 @@ BOOTLOADER = wb32-dfu
 # Build Options
 #   change yes to no to disable
 #
+LEADER_ENABLE = yes			# leader key
+CAPS_WORD_ENABLE = yes	# caps word lasts for one word
+PROGRAMMABLE_BUTTON_ENABLE = yes	# extra buttons for software
+
 BOOTMAGIC_ENABLE = yes       # Enable Bootmagic Lite.
 MOUSEKEY_ENABLE = yes        # Mouse keys.
 EXTRAKEY_ENABLE = yes        # Audio control and System control.
