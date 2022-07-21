@@ -20,36 +20,94 @@ enum LayerNames {
     MACOS,
     WIN,
     DSC,
+    TFN,
     FN
 };
+
+/* #define WIN_RED RGB_RED */
+/* #define WIN_GREEN RGB_GREEN */
+/* #define WIN_BLUE RGB_BLUE */
+/* #define WIN_YELLOW RGB_YELLOW */
+
+#define WIN_RED 0xf2, 0x50, 0x22
+#define WIN_GREEN 0x7f, 0xba, 0x00
+#define WIN_BLUE 0x00, 0xa4, 0xef
+#define WIN_YELLOW 0xff, 0xb9, 0x00
+
+#define DSC_BLURPLE 0x58, 0x65, 0xf2
+
+#define TFN_COLOR 0x12, 0x95, 0xd8
+#define FN_COLOR 0xff, 0xb5, 0x11
 
 void matrix_init_user(void) {
     rgb_matrix_disable();
 }
 
+enum custom_keycodes {
+    SW_WIN = SAFE_RANGE,
+    SW_DSC,
+};
+
+bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+    switch (keycode) {
+        case SW_WIN:
+            if (record->event.pressed) {
+                // pressed
+            } else {
+                // released
+                layer_invert(WIN);
+                layer_off(FN);
+            }
+            break;
+        case SW_DSC:
+            if (record->event.pressed) {
+                // pressed
+            } else {
+                // released
+                layer_invert(DSC);
+                layer_off(FN);
+            }
+            break;
+    }
+    return true;
+}
+
+bool caps_word = false;
+
+void caps_word_set_user(bool active) {
+    caps_word = active;
+}
+
 void rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
-    if (host_keyboard_led_state().caps_lock) {
+    if (host_keyboard_led_state().caps_lock || caps_word) {
         rgb_matrix_set_color(30, RGB_WHITE);
-        /* for (uint8_t i = led_min; i <= led_max; i++) { */
-        /*     if (g_led_config.flags[i] & LED_FLAG_KEYLIGHT) { */
-        /*         rgb_matrix_set_color(i, RGB_RED); */
-        /*     } */
-        /* } */
     }
 
-    if (host_keyboard_led_state().caps_lock) rgb_matrix_set_color(30, RGB_WHITE);
-    if (IS_LAYER_ON(FN)) rgb_matrix_set_color(58, RGB_WHITE);
+    if (IS_LAYER_ON(TFN)) {
+        rgb_matrix_set_color(59, TFN_COLOR);
+    } else if (IS_LAYER_ON(FN)) {
+        rgb_matrix_set_color(59, FN_COLOR);
+    }
+
     if (IS_LAYER_ON(WIN)) {
         /* Show Windows logo in the bottom right. */
 
         /* Red in the top left. */
-        rgb_matrix_set_color(56, 0xf2, 0x50, 0x22);
+        rgb_matrix_set_color(56, WIN_RED);
         /* Green in the top right. */
-        rgb_matrix_set_color(57, 0x7f, 0xba, 0x00);
+        rgb_matrix_set_color(57, WIN_GREEN);
         /* Blue in the bottom left. */
-        rgb_matrix_set_color(65, 0x00, 0xa4, 0xef);
+        rgb_matrix_set_color(65, WIN_BLUE);
         /* Yellow in the bottom right. */
-        rgb_matrix_set_color(66, 0xff, 0xb9, 0x00);
+        rgb_matrix_set_color(66, WIN_YELLOW);
+    }
+
+    if (IS_LAYER_ON(DSC)) {
+        /* Show Discord color over programmable buttons. */
+        rgb_matrix_set_color(29, DSC_BLURPLE);  // DEL
+        rgb_matrix_set_color(43, DSC_BLURPLE);  // PGUP
+        rgb_matrix_set_color(57, DSC_BLURPLE);  // PGDN
+        rgb_matrix_set_color(58, DSC_BLURPLE);  // Bottom left modifier.
     }
 }
 
@@ -99,28 +157,35 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   KC_TAB,  KC_Q,     KC_W,     KC_E,     KC_R,     KC_T,     KC_Y,     KC_U,     KC_I,     KC_O,     KC_P,     KC_LBRC,  KC_RBRC,  KC_BSLS,  KC_DEL,
   KC_LCTL, KC_A,     KC_S,     KC_D,     KC_F,     KC_G,     KC_H,     KC_J,     KC_K,     KC_L,     KC_SCLN,  KC_QUOT,  KC_ENT,             KC_PGUP,
   KC_LSFT, KC_Z,     KC_X,     KC_C,     KC_V,     KC_B,     KC_N,     KC_M,     KC_COMM,  KC_DOT,   KC_SLSH,  KC_RSFT,            KC_UP,    KC_PGDN,
-  TT(FN),  KC_LALT,  KC_LGUI,                                KC_SPC,                                 KC_RGUI,  KC_RALT,  KC_LEFT,  KC_DOWN,  KC_RGHT),
+  KC_LALT, MO(TFN),  KC_LGUI,                                KC_SPC,                                 KC_RGUI,  KC_RALT,  KC_LEFT,  KC_DOWN,  KC_RGHT),
 
 [WIN] = LAYOUT(
-  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,
-  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,
-  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,            _______,
-  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,            _______,  _______,
-  _______,  KC_LGUI,  KC_LALT,                                _______,                                KC_RALT,  KC_RCTL,  _______,  _______,  _______),
+  KC_GRV,  KC_1,     KC_2,     KC_3,     KC_4,     KC_5,     KC_6,     KC_7,     KC_8,     KC_9,     KC_0,     KC_MINS,  KC_EQL,   KC_BSPC,  KC_ESC,
+  KC_TAB,  KC_Q,     KC_W,     KC_E,     KC_R,     KC_T,     KC_Y,     KC_U,     KC_I,     KC_O,     KC_P,     KC_LBRC,  KC_RBRC,  KC_BSLS,  KC_DEL,
+  KC_LCTL, KC_A,     KC_S,     KC_D,     KC_F,     KC_G,     KC_H,     KC_J,     KC_K,     KC_L,     KC_SCLN,  KC_QUOT,  KC_ENT,             KC_PGUP,
+  KC_LSFT, KC_Z,     KC_X,     KC_C,     KC_V,     KC_B,     KC_N,     KC_M,     KC_COMM,  KC_DOT,   KC_SLSH,  KC_RSFT,            KC_UP,    KC_PGDN,
+  KC_LGUI, MO(TFN),  KC_LALT,                                KC_SPC,                                 KC_RALT,  KC_RCTL,  KC_LEFT,  KC_DOWN,  KC_RGHT),
 
 [DSC] = LAYOUT(
-  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  PB_1,
   _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,
-  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,            _______,
-  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,            _______,  _______,
-  _______,  _______,  _______,                                _______,                                _______,  _______,  _______,  _______,  _______),
+  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  PB_1,
+  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,            PB_2,
+  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,            _______,  PB_3,
+  PB_4,     _______,  _______,                                _______,                                _______,  _______,  _______,  _______,  _______),
+
+[TFN] = LAYOUT(
+  TG(FN),   KC_F1,    KC_F2,    KC_F3,    KC_F4,    KC_F5,    KC_F6,    KC_F7,    KC_F8,    KC_F9,    KC_F10,   KC_F11,   KC_F12,     _______,    _______,
+  C(KC_TAB),_______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,    _______,    KC_INS,
+  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,                KC_HOME,
+  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,              C(KC_UP),   KC_END,
+  _______,  _______,  _______,                                _______,                                _______,  _______,  C(KC_LEFT), C(KC_DOWN), C(KC_RIGHT)),
 
 [FN] = LAYOUT(
-  QK_BOOT,    KC_F1,      KC_F2,    KC_F3,    KC_F4,    KC_F5,    KC_F6,    KC_F7,    KC_F8,    KC_F9,    KC_F10,     KC_F11,     KC_F12,     _______,    _______,
-  C(KC_TAB ), RGB_TOG,    RGB_HUI,  _______,  KC_INS,   KC_PSCR,  _______,  _______,  _______,  KC_PGUP,  _______,    KC_VOLD,    KC_VOLU,    KC_MUTE,    _______,
-  KC_CAPS,    RGB_MOD,    RGB_SAI,  _______,  _______,  KC_SCRL,  KC_LEFT,  KC_DOWN,  KC_UP,    KC_RGHT,  KC_BRID,    KC_BRIU,    C(KC_ENT ),             KC_HOME,
-  C(KC_LSFT), C(KC_Z),    C(KC_X),  C(KC_C),  C(KC_V),  KC_PAUS,  KC_PGDN,  _______,  KC_MPRV,  KC_MNXT,  KC_MPLY,    C(KC_RSFT),             C(KC_UP  ), KC_END,
-  TG(FN),     C(KC_LALT), C(KC_LGUI),                             TG(WIN),                                C(KC_RGUI), C(KC_RALT), C(KC_LEFT), C(KC_DOWN), C(KC_RGHT)),
+  _______,  SW_WIN,   SW_DSC,   _______,  _______,  _______,  _______,  _______,  _______,  _______,  QK_BOOT,  _______,  _______,  _______,  _______,
+  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  KC_VOLD,  KC_VOLU,  KC_MUTE,  _______,
+  KC_CAPS,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  KC_BRID,  KC_BRIU,  _______,            _______,
+  _______,  RGB_TOG,  RGB_MOD,  RGB_HUI,  RGB_SAI,  _______,  _______,  _______,  KC_MPRV,  KC_MNXT,  KC_MPLY,  _______,            _______,  _______,
+  _______,  TG(FN),   _______,                                _______,                                _______,  _______,  _______,  _______,  _______),
 
 [31] = LAYOUT(
   _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,  _______,   _______,  _______,
