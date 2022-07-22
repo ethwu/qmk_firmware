@@ -107,6 +107,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 			break;
 		case TG_FOV:
 			rgb_fn_overlay = !rgb_fn_overlay;
+			for (uint8_t i = 67; i < 88; i++) rgb_matrix_set_color(i, RGB_OFF);
 			break;
 		}
 	}
