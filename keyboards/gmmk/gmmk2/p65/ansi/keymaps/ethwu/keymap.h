@@ -68,7 +68,7 @@ enum Keycodes {
 
 #define HFN_COLOR RGB_TURQUOISE
 #define TFN_COLOR RGB_CHARTREUSE
-#define SFN_COLOR RGB_CORAL
+#define SFN_COLOR 0xe4, 0x4c, 0x9a
 
 // Timeout for RGB lights in minutes.
 #define RGB_TIMEOUT 10

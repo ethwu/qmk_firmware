@@ -77,6 +77,12 @@ void suspend_wakeup_init_user(void) {
 // 	return state;
 // }
 
+void disable_rgb_overlay_underglow(void) {
+	if (rgb_matrix_get_mode() == RGB_MATRIX_TYPING_HEATMAP) {
+		for (uint8_t i = 67; i < 88; i++) rgb_matrix_set_color(i, RGB_OFF);
+	}
+}
+
 // Run whenever a key is pressed or released, before the key event is handled. 
 // Returns true if QMK should handle the key event normally. 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
@@ -100,14 +106,16 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 		case LT_FN:
 			layer_off(HFN);
 			if (timer_elapsed(fn_layer_tap_timer) < TAPPING_TERM) layer_invert(TFN);
+			disable_rgb_overlay_underglow();
 			break;
 		case MF_SFN:
 			layer_off(SFN);
 			layer_off(TFN);
+			disable_rgb_overlay_underglow();
 			break;
 		case TG_FOV:
 			rgb_fn_overlay = !rgb_fn_overlay;
-			for (uint8_t i = 67; i < 88; i++) rgb_matrix_set_color(i, RGB_OFF);
+			disable_rgb_overlay_underglow();
 			break;
 		}
 	}
@@ -122,7 +130,6 @@ void caps_word_set_user(bool active) {
 // Set RGB indicators.
 void rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
 	uint8_t highest_layer = get_highest_layer(layer_state | default_layer_state);
-	uint8_t rgb_mode = rgb_matrix_get_mode();
 
 	// Highlight the caps lock key in white if caps lock or caps word are active.
 	if (host_keyboard_led_state().caps_lock || caps_word) {
@@ -197,11 +204,6 @@ void rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
 				break;
 			case SFN:
 				rgb_matrix_set_color(index, SFN_COLOR);
-				break;
-			default:
-				if (rgb_mode == RGB_MATRIX_TYPING_HEATMAP) {
-					rgb_matrix_set_color(index, RGB_OFF);
-				}
 				break;
 			}
 		}
