@@ -145,30 +145,25 @@ void rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
 		rgb_matrix_set_color(66, WIN_YELLOW);
 	}
 
-	if (IS_LAYER_ON(DSC)) {
-		/* Show Discord color over programmable buttons. */
-		rgb_matrix_set_color(29, DSC_BLURPLE);  // DEL
-		rgb_matrix_set_color(43, DSC_BLURPLE);  // PGUP
-		rgb_matrix_set_color(57, DSC_BLURPLE);  // PGDN
-		rgb_matrix_set_color(58, DSC_BLURPLE);  // Bottom left modifier.
-	}
-
 	// Highlight function layer keys in their colors.
-	if (highest_layer >= HFN) {
+	if (highest_layer >= BOTTOM_FN_LAYER) {
 		for (uint8_t row = 0; row < MATRIX_ROWS; row++) {
 			for (uint8_t col = 0; col < MATRIX_COLS; col++) {
 				uint8_t index = g_led_config.matrix_co[row][col];
 				keypos_t pos = {col, row};
 
 				uint8_t which_layer;
-				for (which_layer = highest_layer; which_layer >= HFN; which_layer--) {
+				for (which_layer = highest_layer; which_layer >= BOTTOM_FN_LAYER; which_layer--) {
 					if (keymap_key_to_keycode(which_layer, pos) > KC_TRNS &&
 						IS_LAYER_ON(which_layer)) {
 						break;
 					}
 				}
-				if (index >= 0 && index <= 88 && index != NO_LED && which_layer >= HFN) {
+				if (index >= 0 && index <= 88 && index != NO_LED && which_layer >= BOTTOM_FN_LAYER) {
 					switch (which_layer) {
+						case DSC:
+							rgb_matrix_set_color(index, DSC_BLURPLE);
+							break;
 						case HFN:
 							rgb_matrix_set_color(index, HFN_COLOR);
 							break;

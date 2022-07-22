@@ -43,6 +43,9 @@ enum Keycodes {
 	SW_DSC
 };
 
+// The bottommost function layer.
+#define BOTTOM_FN_LAYER DSC
+
 // Colors of the Windows logo.
 
 // #define WIN_RED RGB_RED
