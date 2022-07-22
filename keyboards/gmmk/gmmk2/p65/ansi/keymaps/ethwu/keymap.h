@@ -47,6 +47,7 @@ enum Keycodes {
 
 // The bottommost function layer.
 #define BOTTOM_FN_LAYER DSC
+#define TOP_FN_LAYER SFN
 
 // Colors of the Windows logo.
 

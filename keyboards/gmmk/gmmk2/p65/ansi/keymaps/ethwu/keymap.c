@@ -17,12 +17,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include QMK_KEYBOARD_H
 #include "keymap.h"
 
+const int FN_COLORS[TOP_FN_LAYER - BOTTOM_FN_LAYER + 1][3] = {
+    { DSC_BLURPLE },
+    { HFN_COLOR },
+    { TFN_COLOR },
+    { SFN_COLOR }
+};
+
 // Timer for the tap/held fn layer change key LT_FN.
-static uint16_t fn_layer_tap_timer;
+static uint16_t fn_layer_tap_timer = 0;
 // Timer for shutting off the lights after keyboard is idle.
-static uint16_t idle_timer;
+static uint16_t idle_timer = 0;
 // Minutes elapsed (for tracking when to shut off the lights).
-static uint8_t idle_minutes_elapsed;
+static uint8_t idle_minutes_elapsed = 0;
 // Whether the RGB matrix has been disabled by the idle timer.
 static bool rgb_matrix_idled = false;
 // Whether RGB function layer overlays are enabled.
@@ -30,6 +37,15 @@ static bool rgb_fn_overlay = true;
 
 // Whether caps word is enabled.
 static bool caps_word = false;
+
+// Set the color of a given LED to the appropriate function layer color.
+void set_led_color_for_fn_layer(uint8_t led, uint8_t layer) {
+	if (layer >= BOTTOM_FN_LAYER && layer <= TOP_FN_LAYER) {
+		// Pointer to the array of colors for this layer.
+		const int (*colors)[3] = &FN_COLORS[layer - BOTTOM_FN_LAYER];
+		rgb_matrix_set_color(led, (*colors)[0], (*colors)[1], (*colors)[2]);
+	}
+}
 
 // Reset the idle timer.
 void reset_idle_timer(void) {
@@ -49,12 +65,14 @@ void keyboard_post_init_user(void) {
 // Run every matrix scan (as often as possible).
 void matrix_scan_user(void) {
 	if (timer_elapsed(idle_timer) > 60000) {
+		// Reset the idle timer.
 		idle_timer = timer_read();
-		idle_timer++;
-
-		if (idle_minutes_elapsed > RGB_TIMEOUT && !rgb_matrix_idled) {
-			reset_idle_timer();
+		if (idle_minutes_elapsed >= RGB_TIMEOUT && !rgb_matrix_idled) {
+			// It is time to turn the matrix off.
+			idle_minutes_elapsed = 0;
 			rgb_matrix_disable_noeeprom();
+		} else {
+			idle_minutes_elapsed++;
 		}
 	}
 }
@@ -79,7 +97,7 @@ void suspend_wakeup_init_user(void) {
 
 void disable_rgb_overlay_underglow(void) {
 	if (rgb_matrix_get_mode() == RGB_MATRIX_TYPING_HEATMAP) {
-		for (uint8_t i = 67; i < 88; i++) rgb_matrix_set_color(i, RGB_OFF);
+		for (uint8_t i = 67; i < 87; i++) rgb_matrix_set_color(i, RGB_OFF);
 	}
 }
 
@@ -162,66 +180,25 @@ void rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
 			for (uint8_t row = 0; row < MATRIX_ROWS; row++) {
 				for (uint8_t col = 0; col < MATRIX_COLS; col++) {
 					uint8_t index = g_led_config.matrix_co[row][col];
-					keypos_t pos = {col, row};
 
 					uint8_t which_layer;
 					for (which_layer = highest_layer; which_layer >= BOTTOM_FN_LAYER; which_layer--) {
-						if (IS_LAYER_ON(which_layer)) {
-							if (keymap_key_to_keycode(which_layer, pos) > KC_TRNS || index == 59) {
-								break;
-							}
+						if (IS_LAYER_ON(which_layer) && 
+							keymap_key_to_keycode(which_layer, (keypos_t){ col, row })) {
+							break;
 						}
 					}
 					if (index != NO_LED && which_layer >= BOTTOM_FN_LAYER) {
-						switch (which_layer) {
-							case DSC:
-								if (index != 59) rgb_matrix_set_color(index, DSC_BLURPLE);
-								break;
-							case HFN:
-								rgb_matrix_set_color(index, HFN_COLOR);
-								break;
-							case TFN:
-								rgb_matrix_set_color(index, TFN_COLOR);
-								break;
-							case SFN:
-								rgb_matrix_set_color(index, SFN_COLOR);
-								break;
-						}
+						set_led_color_for_fn_layer(index, which_layer);
 					}
 				}
 			}
 		}
-		for (uint8_t index = 67; index < 88; index++) {
-			switch (highest_layer) {
-			case DSC:
-				rgb_matrix_set_color(index, DSC_BLURPLE);
-				break;
-			case HFN:
-				rgb_matrix_set_color(index, HFN_COLOR);
-				break;
-			case TFN:
-				rgb_matrix_set_color(index, TFN_COLOR);
-				break;
-			case SFN:
-				rgb_matrix_set_color(index, SFN_COLOR);
-				break;
-			}
+		for (uint8_t index = 67; index < 87; index++) {
+			set_led_color_for_fn_layer(index, highest_layer);
 		}
 	} else {
-		switch (highest_layer) {
-		case DSC:
-			rgb_matrix_set_color(59, DSC_BLURPLE);
-			break;
-		case HFN:
-			rgb_matrix_set_color(59, HFN_COLOR);
-			break;
-		case TFN:
-			rgb_matrix_set_color(59, TFN_COLOR);
-			break;
-		case SFN:
-			rgb_matrix_set_color(59, SFN_COLOR);
-			break;
-		}
+		set_led_color_for_fn_layer(59, highest_layer);
 	}
 }
 
