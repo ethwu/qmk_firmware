@@ -25,6 +25,8 @@ static uint16_t idle_timer;
 static uint8_t idle_minutes_elapsed;
 // Whether the RGB matrix has been disabled by the idle timer.
 static bool rgb_matrix_idled = false;
+// Whether RGB function layer overlays are enabled.
+static bool rgb_fn_overlay = true;
 
 // Whether caps word is enabled.
 static bool caps_word = false;
@@ -103,6 +105,9 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 			layer_off(SFN);
 			layer_off(TFN);
 			break;
+		case TG_FOV:
+			rgb_fn_overlay = !rgb_fn_overlay;
+			break;
 		}
 	}
 	return true;
@@ -143,58 +148,75 @@ void rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
 		/* rgb_matrix_set_color(63, WIN_YELLOW); */
 	}
 
-	// Highlight function layer keys in their colors.
-	if (highest_layer >= BOTTOM_FN_LAYER) {
-		for (uint8_t row = 0; row < MATRIX_ROWS; row++) {
-			for (uint8_t col = 0; col < MATRIX_COLS; col++) {
-				uint8_t index = g_led_config.matrix_co[row][col];
-				keypos_t pos = {col, row};
+	if (rgb_fn_overlay) {
+		// Highlight function layer keys in their colors.
+		if (highest_layer >= BOTTOM_FN_LAYER) {
+			for (uint8_t row = 0; row < MATRIX_ROWS; row++) {
+				for (uint8_t col = 0; col < MATRIX_COLS; col++) {
+					uint8_t index = g_led_config.matrix_co[row][col];
+					keypos_t pos = {col, row};
 
-				uint8_t which_layer;
-				for (which_layer = highest_layer; which_layer >= BOTTOM_FN_LAYER; which_layer--) {
-					if (IS_LAYER_ON(which_layer)) {
-						if (keymap_key_to_keycode(which_layer, pos) > KC_TRNS || index == 59) {
-							break;
+					uint8_t which_layer;
+					for (which_layer = highest_layer; which_layer >= BOTTOM_FN_LAYER; which_layer--) {
+						if (IS_LAYER_ON(which_layer)) {
+							if (keymap_key_to_keycode(which_layer, pos) > KC_TRNS || index == 59) {
+								break;
+							}
 						}
 					}
-				}
-				if (index != NO_LED && which_layer >= BOTTOM_FN_LAYER) {
-					switch (which_layer) {
-						case DSC:
-							if (index != 59) rgb_matrix_set_color(index, DSC_BLURPLE);
-							break;
-						case HFN:
-							rgb_matrix_set_color(index, HFN_COLOR);
-							break;
-						case TFN:
-							rgb_matrix_set_color(index, TFN_COLOR);
-							break;
-						case SFN:
-							rgb_matrix_set_color(index, SFN_COLOR);
-							break;
+					if (index != NO_LED && which_layer >= BOTTOM_FN_LAYER) {
+						switch (which_layer) {
+							case DSC:
+								if (index != 59) rgb_matrix_set_color(index, DSC_BLURPLE);
+								break;
+							case HFN:
+								rgb_matrix_set_color(index, HFN_COLOR);
+								break;
+							case TFN:
+								rgb_matrix_set_color(index, TFN_COLOR);
+								break;
+							case SFN:
+								rgb_matrix_set_color(index, SFN_COLOR);
+								break;
+						}
 					}
 				}
 			}
 		}
-	}
-	for (uint8_t index = 67; index < 88; index++) {
+		for (uint8_t index = 67; index < 88; index++) {
+			switch (highest_layer) {
+			case DSC:
+				rgb_matrix_set_color(index, DSC_BLURPLE);
+				break;
+			case HFN:
+				rgb_matrix_set_color(index, HFN_COLOR);
+				break;
+			case TFN:
+				rgb_matrix_set_color(index, TFN_COLOR);
+				break;
+			case SFN:
+				rgb_matrix_set_color(index, SFN_COLOR);
+				break;
+			default:
+				if (rgb_mode == RGB_MATRIX_TYPING_HEATMAP) {
+					rgb_matrix_set_color(index, RGB_OFF);
+				}
+				break;
+			}
+		}
+	} else {
 		switch (highest_layer) {
 		case DSC:
-			rgb_matrix_set_color(index, DSC_BLURPLE);
+			rgb_matrix_set_color(59, DSC_BLURPLE);
 			break;
 		case HFN:
-			rgb_matrix_set_color(index, HFN_COLOR);
+			rgb_matrix_set_color(59, HFN_COLOR);
 			break;
 		case TFN:
-			rgb_matrix_set_color(index, TFN_COLOR);
+			rgb_matrix_set_color(59, TFN_COLOR);
 			break;
 		case SFN:
-			rgb_matrix_set_color(index, SFN_COLOR);
-			break;
-		default:
-			if (rgb_mode == RGB_MATRIX_TYPING_HEATMAP) {
-				rgb_matrix_set_color(index, RGB_OFF);
-			}
+			rgb_matrix_set_color(59, SFN_COLOR);
 			break;
 		}
 	}
@@ -237,7 +259,7 @@ XXXXXXX,	MF_SFN ,	XXXXXXX,	        	        	        	XXXXXXX,	        	        
 QK_BOOT,	KC_F13 ,	KC_F14 ,	KC_F15 ,	KC_F16 ,	KC_F17 ,	KC_F18 ,	KC_F19 ,	KC_F20 ,	KC_F21 ,	KC_F22 ,	KC_F23 ,	KC_F24 ,	_______,	_______,
 _______,	_______,	TG(WIN),	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	KC_PSCR,
 KC_CAPS,	_______,	_______,	TG(DSC),	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,            	KC_SCRL,
-_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	        	_______,	KC_PAUS,
+_______,	TG_FOV ,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	        	_______,	KC_PAUS,
 _______,	_______,	_______,	        	        	        	_______,	        	        	        	_______,	_______,	_______,	_______,	_______),
 	[31] = LAYOUT(
 _______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,

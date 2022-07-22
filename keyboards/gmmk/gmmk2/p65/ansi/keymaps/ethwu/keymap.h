@@ -37,10 +37,12 @@ enum Keycodes {
 	// Momentarily activate SFN while held and deactivate both FN and SFN when
 	// released.
 	MF_SFN,
-	// Toggle the Windows layer.
-	SW_WIN,
-	// Toggle the Discord layer.
-	SW_DSC
+	// // Toggle the Windows layer.
+	// SW_WIN,
+	// // Toggle the Discord layer.
+	// SW_DSC,
+	// Toggle function layer RGB overlay.
+	TG_FOV
 };
 
 // The bottommost function layer.
