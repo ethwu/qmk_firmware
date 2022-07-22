@@ -116,19 +116,11 @@ void caps_word_set_user(bool active) {
 // Set RGB indicators.
 void rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
 	uint8_t highest_layer = get_highest_layer(layer_state | default_layer_state);
+	uint8_t rgb_mode = rgb_matrix_get_mode();
 
 	// Highlight the caps lock key in white if caps lock or caps word are active.
 	if (host_keyboard_led_state().caps_lock || caps_word) {
 		rgb_matrix_set_color(30, RGB_WHITE);
-	}
-
-	// Layer indicator on FN for the function key.
-	if (IS_LAYER_ON(HFN)) {
-		rgb_matrix_set_color(59, HFN_COLOR);
-	} else if (IS_LAYER_ON(TFN)) {
-		rgb_matrix_set_color(59, TFN_COLOR);
-	} else if (IS_LAYER_ON(SFN)) {
-		rgb_matrix_set_color(59, SFN_COLOR);
 	}
 
 	// Windows layer indicator.
@@ -159,16 +151,17 @@ void rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
 				keypos_t pos = {col, row};
 
 				uint8_t which_layer;
+				int kc;
 				for (which_layer = highest_layer; which_layer >= BOTTOM_FN_LAYER; which_layer--) {
-					if (keymap_key_to_keycode(which_layer, pos) > KC_TRNS &&
-						IS_LAYER_ON(which_layer)) {
-						break;
+					if (IS_LAYER_ON(which_layer)) {
+						kc = keymap_key_to_keycode(which_layer, pos);
+						if (kc > KC_TRNS || index == 59) break;
 					}
 				}
 				if (index >= 0 && index <= 66 && index != NO_LED && which_layer >= BOTTOM_FN_LAYER) {
 					switch (which_layer) {
 						case DSC:
-							rgb_matrix_set_color(index, DSC_BLURPLE);
+							if (index != 59) rgb_matrix_set_color(index, DSC_BLURPLE);
 							break;
 						case HFN:
 							rgb_matrix_set_color(index, HFN_COLOR);
@@ -182,6 +175,28 @@ void rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
 					}
 				}
 			}
+		}
+	}
+
+	for (uint8_t index = 69; index <= 88; index++) {
+		switch (highest_layer) {
+		case DSC:
+			rgb_matrix_set_color(index, DSC_BLURPLE);
+			break;
+		case HFN:
+			rgb_matrix_set_color(index, HFN_COLOR);
+			break;
+		case TFN:
+			rgb_matrix_set_color(index, TFN_COLOR);
+			break;
+		case SFN:
+			rgb_matrix_set_color(index, SFN_COLOR);
+			break;
+		default:
+			if (rgb_mode == RGB_MATRIX_TYPING_HEATMAP) {
+				rgb_matrix_set_color(index, RGB_OFF);
+			}
+			break;
 		}
 	}
 }
@@ -232,3 +247,5 @@ _______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,
 _______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	        	_______,	_______,
 _______,	_______,	_______,	        	        	        	_______,	        	        	        	_______,	_______,	_______,	_______,	_______)
 };
+
+// vim: noexpandtab
