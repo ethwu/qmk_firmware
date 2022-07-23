@@ -37,8 +37,6 @@ enum Keycodes {
 	// Momentarily activate SFN while held and deactivate both FN and SFN when
 	// released.
 	MF_SFN,
-	// Escape the function layers.
-	FN_ESC,
 	// // Toggle the Windows layer.
 	// SW_WIN,
 	// // Toggle the Discord layer.

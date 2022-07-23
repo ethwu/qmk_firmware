@@ -163,7 +163,6 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 			}
 			// fall through
 		case MF_SFN:
-		case FN_ESC:
 			disable_fn_layers();
 			break;
 		case TG_FOV:
@@ -311,7 +310,7 @@ _______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,
 _______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	        	_______,	KC_END ,
 _______,	LT_FN  ,	_______,	        	        	        	_______,	        	        	        	_______,	KC_APP ,	_______,	_______,	_______),
 	[TFN] = LAYOUT(
-XXXXXXX,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	XXXXXXX,	FN_ESC,
+XXXXXXX,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	XXXXXXX,	MF_SFN,
 _______,	QUIT   ,	CLOSE  ,	XXXXXXX,	REDO   ,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	KC_VOLD,	KC_VOLU,	KC_MUTE,	XXXXXXX,
 XXXXXXX,	KC_SELECT,	XXXXXXX,	XXXXXXX,	KC_FIND,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	KC_BRID,	KC_BRIU,	XXXXXXX,            	SW_PREV,
 _______,	KC_UNDO,	KC_CUT ,	KC_COPY,	KC_PASTE,	XXXXXXX,	XXXXXXX,	XXXXXXX,	KC_MPRV,	KC_MNXT,	KC_MPLY,	_______,	        	XXXXXXX,	SW_NEXT,
