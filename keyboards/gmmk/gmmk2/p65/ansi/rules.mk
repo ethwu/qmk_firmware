@@ -13,6 +13,7 @@ CAPS_WORD_ENABLE = yes	# caps word lasts for one word
 PROGRAMMABLE_BUTTON_ENABLE = yes	# extra buttons for software
 SPACE_CADET_ENABLE = no
 GRAVE_ESC_ENABLE = no
+MAGIC_ENABLE = no
 
 BOOTMAGIC_ENABLE = yes       # Enable Bootmagic Lite.
 MOUSEKEY_ENABLE = no        # Mouse keys.

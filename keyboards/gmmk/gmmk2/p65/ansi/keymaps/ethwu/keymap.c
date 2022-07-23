@@ -35,9 +35,6 @@ static bool rgb_matrix_idled = false;
 // Whether RGB function layer overlays are enabled.
 static bool rgb_fn_overlay = true;
 
-// Whether caps word is enabled.
-static bool caps_word = false;
-
 // Get the index of the corresponding color array for the given function layer.
 // Returns -1 if the given function layer does not have a corresponding color
 // array.
@@ -95,7 +92,6 @@ void matrix_scan_user(void) {
 		idle_timer = timer_read();
 		if (idle_minutes_elapsed >= RGB_TIMEOUT && !rgb_matrix_idled) {
 			// It is time to turn the matrix off.
-			idle_minutes_elapsed = 0;
 			rgb_matrix_disable_noeeprom();
 			rgb_matrix_idled = true;
 		} else {
@@ -118,15 +114,27 @@ void suspend_wakeup_init_user(void) {
 }
 
 // // Run whenever the layer changes.
-// layer_state_t layer_state_set_user(layer_state_t state) {
-// 	return state;
-// }
+layer_state_t layer_state_set_user(layer_state_t state) {
+	if (rgb_matrix_get_mode() == RGB_MATRIX_TYPING_HEATMAP) set_led_colors(67, 87, RGB_OFF);
+	return state;
+}
 
-void disable_rgb_overlay_underglow(void) {
-	if (rgb_matrix_get_mode() == RGB_MATRIX_TYPING_HEATMAP) {
-		set_led_colors(67, 87, RGB_OFF);
+void disable_fn_layers(void) {
+	layer_and(((layer_state_t)1 << WIN) | ((layer_state_t)1 << DSC));
+}
+
+// Send a different string in Windows vs macOS mode.
+void send_string_win_mac(const char *win_str, const char *mac_str) {
+	if (IS_LAYER_ON(WIN)) {
+		send_string_P(win_str);
+	} else {
+		send_string_P(mac_str);
 	}
 }
+#define SS_WM(win, mac) send_string_win_mac(PSTR(win), PSTR(mac))
+
+// Send a basic keyboard shortcut that has shared letter btw windows and mac.
+#define SBS_WM(shortcut) SS_WM(SS_LCTL(shortcut), SS_LGUI(shortcut))
 
 // Run whenever a key is pressed or released, before the key event is handled. 
 // Returns true if QMK should handle the key event normally. 
@@ -151,37 +159,70 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 		case LT_FN:
 			if (timer_elapsed(fn_layer_tap_timer) < TAPPING_TERM) {
 				layer_on(TFN);
-			} else {
-				layer_off(HFN);
+				break;
 			}
-			disable_rgb_overlay_underglow();
-			break;
+			// fall through
 		case MF_SFN:
-			layer_off(HFN);
-			layer_off(TFN);
-			layer_off(SFN);
-			disable_rgb_overlay_underglow();
+		case FN_ESC:
+			disable_fn_layers();
 			break;
 		case TG_FOV:
 			rgb_fn_overlay = !rgb_fn_overlay;
-			disable_rgb_overlay_underglow();
+			break;
+		case KC_SELECT:
+			SBS_WM("a");
+			break;
+		case KC_UNDO:
+			SBS_WM("z");
+			break;
+		case KC_CUT:
+			SS_WM(SS_TAP(X_DEL)SS_LCTL(SS_TAP(X_INS)), SS_LGUI("x"));
+			break;
+		case KC_COPY:
+			SS_WM(SS_LCTL(SS_TAP(X_INS)), SS_LGUI("c"));
+			break;
+		case KC_PASTE:
+			SS_WM(SS_LSFT(SS_TAP(X_INS)), SS_LGUI("v"));
+			disable_fn_layers();
+			break;
+		case REDO:
+			SS_WM(SS_LCTL("r"), SS_LGUI(SS_LSFT("z")));
+			break;
+		case CLOSE:
+			SS_WM(SS_LCTL(SS_TAP(X_F4)), SS_LGUI("w"));
+			disable_fn_layers();
+			break;
+		case QUIT:
+			SS_WM(SS_LALT(SS_TAP(X_F4)), SS_LGUI("q"));
+			disable_fn_layers();
+			break;
+		case SW_NEXT:
+			// Next desktop.
+			SS_WM(SS_LGUI(SS_TAP(X_RIGHT)), SS_LCTL(SS_TAP(X_RIGHT)));
+			break;
+		case SW_PREV:
+			// Previous desktop.
+			SS_WM(SS_LGUI(SS_TAP(X_LEFT)), SS_LCTL(SS_TAP(X_LEFT)));
+			break;
+		case KC_EXEC:
+			SS_WM(SS_TAP(X_LGUI), SS_LGUI(" "));
+			disable_fn_layers();
 			break;
 		}
 	}
 	return true;
 }
 
-// Run when caps word state changes.
-void caps_word_set_user(bool active) {
-	caps_word = active;
-}
+// // Run after a keystroke is sent.
+// void post_process_record_user(uint16_t keycode, keyrecord_t *record) {
+// }
 
 // Set RGB indicators.
 void rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
 	uint8_t highest_layer = get_highest_layer(layer_state | default_layer_state);
 
 	// Highlight the caps lock key in white if caps lock or caps word are active.
-	if (host_keyboard_led_state().caps_lock || caps_word) {
+	if (host_keyboard_led_state().caps_lock || is_caps_word_on()) {
 		rgb_matrix_set_color(30, RGB_WHITE);
 	}
 
@@ -213,16 +254,11 @@ void rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
 					uint8_t index = g_led_config.matrix_co[row][col];
 					keypos_t pos = { col, row };
 
-					uint8_t which_layer;
-					uint16_t kc;
-					for (which_layer = highest_layer; which_layer >= BOTTOM_FN_LAYER; which_layer--) {
-						kc = keymap_key_to_keycode(which_layer, pos);
-						if (IS_LAYER_ON(which_layer) && kc != KC_TRNS) {
-							break;
-						}
-					}
+					uint8_t which_layer = layer_switch_get_layer(pos);
+					uint16_t kc = keymap_key_to_keycode(which_layer, pos);
 
-					if (index != NO_LED && which_layer >= BOTTOM_FN_LAYER) {
+					if (index != NO_LED && which_layer >= BOTTOM_FN_LAYER &&
+						IS_LAYER_ON(which_layer)) {
 						switch (kc) {
 						case KC_NO:
 							rgb_matrix_set_color(index, RGB_OFF);
@@ -273,18 +309,18 @@ _______,	KC_F1  ,	KC_F2  ,	KC_F3  ,	KC_F4  ,	KC_F5  ,	KC_F6  ,	KC_F7  ,	KC_F8  ,
 C(KC_TAB),	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	KC_INS ,
 _______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,            	KC_HOME,
 _______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	        	_______,	KC_END ,
-_______,	LT_FN  ,	_______,	        	        	        	_______,	        	        	        	_______,	_______,	_______,	_______,	_______),
+_______,	LT_FN  ,	_______,	        	        	        	_______,	        	        	        	_______,	KC_APP ,	_______,	_______,	_______),
 	[TFN] = LAYOUT(
-XXXXXXX,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	XXXXXXX,	TG(TFN),
-XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	KC_VOLD,	KC_VOLU,	KC_MUTE,	XXXXXXX,
-XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	KC_BRID,	KC_BRIU,	XXXXXXX,            	XXXXXXX,
-XXXXXXX,	RGB_TOG,	RGB_MOD,	RGB_HUI,	RGB_SAI,	RGB_VAI,	XXXXXXX,	XXXXXXX,	KC_MPRV,	KC_MNXT,	KC_MPLY,	XXXXXXX,	        	XXXXXXX,	XXXXXXX,
-XXXXXXX,	MF_SFN ,	XXXXXXX,	        	        	        	XXXXXXX,	        	        	        	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX),
+XXXXXXX,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	XXXXXXX,	FN_ESC,
+_______,	QUIT   ,	CLOSE  ,	XXXXXXX,	REDO   ,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	KC_VOLD,	KC_VOLU,	KC_MUTE,	XXXXXXX,
+XXXXXXX,	KC_SELECT,	XXXXXXX,	XXXXXXX,	KC_FIND,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	KC_BRID,	KC_BRIU,	XXXXXXX,            	SW_PREV,
+_______,	KC_UNDO,	KC_CUT ,	KC_COPY,	KC_PASTE,	XXXXXXX,	XXXXXXX,	XXXXXXX,	KC_MPRV,	KC_MNXT,	KC_MPLY,	_______,	        	XXXXXXX,	SW_NEXT,
+XXXXXXX,	MF_SFN ,	XXXXXXX,	        	        	        	KC_EXEC,	        	        	        	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX),
 	[SFN] = LAYOUT(
 QK_BOOT,	KC_F13 ,	KC_F14 ,	KC_F15 ,	KC_F16 ,	KC_F17 ,	KC_F18 ,	KC_F19 ,	KC_F20 ,	KC_F21 ,	KC_F22 ,	KC_F23 ,	KC_F24 ,	_______,	_______,
-_______,	_______,	SW_WIN ,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	KC_PSCR,
+S(_______),	TG_FOV ,	SW_WIN ,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	KC_PSCR,
 KC_CAPS,	_______,	_______,	SW_DSC ,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,            	KC_SCRL,
-_______,	TG_FOV ,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	        	_______,	KC_PAUS,
+_______,	RGB_TOG,	RGB_MOD,	RGB_HUI,	RGB_SAI,	RGB_VAI,	_______,	_______,	_______,	_______,	_______,	_______,	        	_______,	KC_PAUS,
 _______,	MF_SFN ,	_______,	        	        	        	_______,	        	        	        	_______,	_______,	_______,	_______,	_______),
 	[31] = LAYOUT(
 _______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,

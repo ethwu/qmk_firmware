@@ -37,10 +37,17 @@ enum Keycodes {
 	// Momentarily activate SFN while held and deactivate both FN and SFN when
 	// released.
 	MF_SFN,
+	// Escape the function layers.
+	FN_ESC,
 	// // Toggle the Windows layer.
 	// SW_WIN,
 	// // Toggle the Discord layer.
 	// SW_DSC,
+	REDO,
+	CLOSE,
+	QUIT,
+	SW_NEXT,
+	SW_PREV,
 	// Toggle function layer RGB overlay.
 	TG_FOV
 };
@@ -76,3 +83,5 @@ enum Keycodes {
 
 // Timeout for RGB lights in minutes.
 #define RGB_TIMEOUT 10
+
+// vim: noexpandtab
