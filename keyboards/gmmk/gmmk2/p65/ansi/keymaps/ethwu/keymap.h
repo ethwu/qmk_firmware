@@ -45,6 +45,9 @@ enum Keycodes {
 	TG_FOV
 };
 
+#define SW_WIN TG(WIN)
+#define SW_DSC TG(DSC)
+
 // The bottommost function layer.
 #define BOTTOM_FN_LAYER DSC
 #define TOP_FN_LAYER SFN
@@ -67,7 +70,7 @@ enum Keycodes {
 
 // Function layer colors.
 
-#define HFN_COLOR RGB_TURQUOISE
+#define HFN_COLOR 0x00, 0xb0, 0xda
 #define TFN_COLOR RGB_CHARTREUSE
 #define SFN_COLOR 0xe4, 0x4c, 0x9a
 

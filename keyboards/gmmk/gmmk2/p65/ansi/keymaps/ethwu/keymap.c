@@ -17,7 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include QMK_KEYBOARD_H
 #include "keymap.h"
 
-const int FN_COLORS[TOP_FN_LAYER - BOTTOM_FN_LAYER + 1][3] = {
+static const int FN_COLORS[TOP_FN_LAYER - BOTTOM_FN_LAYER + 1][3] = {
     { DSC_BLURPLE },
     { HFN_COLOR },
     { TFN_COLOR },
@@ -38,12 +38,37 @@ static bool rgb_fn_overlay = true;
 // Whether caps word is enabled.
 static bool caps_word = false;
 
+// Get the index of the corresponding color array for the given function layer.
+// Returns -1 if the given function layer does not have a corresponding color
+// array.
+int fn_color_index(uint8_t layer) {
+	if (layer >= BOTTOM_FN_LAYER && layer <= TOP_FN_LAYER) {
+		return layer - BOTTOM_FN_LAYER;
+	} else {
+		return -1;
+	}
+}
+
 // Set the color of a given LED to the appropriate function layer color.
 void set_led_color_for_fn_layer(uint8_t led, uint8_t layer) {
-	if (layer >= BOTTOM_FN_LAYER && layer <= TOP_FN_LAYER) {
-		// Pointer to the array of colors for this layer.
-		const int (*colors)[3] = &FN_COLORS[layer - BOTTOM_FN_LAYER];
-		rgb_matrix_set_color(led, (*colors)[0], (*colors)[1], (*colors)[2]);
+	int color_index = fn_color_index(layer);
+	if (color_index > -1) {
+		rgb_matrix_set_color(led, FN_COLORS[color_index][0],
+			FN_COLORS[color_index][1], FN_COLORS[color_index][2]);
+	}
+}
+
+// Set led colors for a range.
+void set_led_colors(uint8_t start, uint8_t end, uint8_t r, uint8_t g, uint8_t b) {
+	for (uint8_t i = start; i < end; i++) rgb_matrix_set_color(i, r, g, b);
+}
+
+// Set led colors for a range according to the function layer color.
+void set_led_colors_for_fn_layer(uint8_t start, uint8_t end, uint8_t layer) {
+	int color_index = fn_color_index(layer);
+	if (color_index > -1) {
+		set_led_colors(start, end, FN_COLORS[color_index][0],
+			FN_COLORS[color_index][1], FN_COLORS[color_index][2]);
 	}
 }
 
@@ -51,6 +76,7 @@ void set_led_color_for_fn_layer(uint8_t led, uint8_t layer) {
 void reset_idle_timer(void) {
 	idle_timer = timer_read();
 	idle_minutes_elapsed = 0;
+	rgb_matrix_idled = false;
 }
 
 // // Run very early (before USB is started). Primarily for initing hardware.
@@ -71,6 +97,7 @@ void matrix_scan_user(void) {
 			// It is time to turn the matrix off.
 			idle_minutes_elapsed = 0;
 			rgb_matrix_disable_noeeprom();
+			rgb_matrix_idled = true;
 		} else {
 			idle_minutes_elapsed++;
 		}
@@ -97,7 +124,7 @@ void suspend_wakeup_init_user(void) {
 
 void disable_rgb_overlay_underglow(void) {
 	if (rgb_matrix_get_mode() == RGB_MATRIX_TYPING_HEATMAP) {
-		for (uint8_t i = 67; i < 87; i++) rgb_matrix_set_color(i, RGB_OFF);
+		set_led_colors(67, 87, RGB_OFF);
 	}
 }
 
@@ -122,13 +149,17 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 		// key released
 		switch (keycode) {
 		case LT_FN:
-			layer_off(HFN);
-			if (timer_elapsed(fn_layer_tap_timer) < TAPPING_TERM) layer_invert(TFN);
+			if (timer_elapsed(fn_layer_tap_timer) < TAPPING_TERM) {
+				layer_on(TFN);
+			} else {
+				layer_off(HFN);
+			}
 			disable_rgb_overlay_underglow();
 			break;
 		case MF_SFN:
-			layer_off(SFN);
+			layer_off(HFN);
 			layer_off(TFN);
+			layer_off(SFN);
 			disable_rgb_overlay_underglow();
 			break;
 		case TG_FOV:
@@ -180,23 +211,37 @@ void rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
 			for (uint8_t row = 0; row < MATRIX_ROWS; row++) {
 				for (uint8_t col = 0; col < MATRIX_COLS; col++) {
 					uint8_t index = g_led_config.matrix_co[row][col];
+					keypos_t pos = { col, row };
 
 					uint8_t which_layer;
+					uint16_t kc;
 					for (which_layer = highest_layer; which_layer >= BOTTOM_FN_LAYER; which_layer--) {
-						if (IS_LAYER_ON(which_layer) && 
-							keymap_key_to_keycode(which_layer, (keypos_t){ col, row })) {
+						kc = keymap_key_to_keycode(which_layer, pos);
+						if (IS_LAYER_ON(which_layer) && kc != KC_TRNS) {
 							break;
 						}
 					}
+
 					if (index != NO_LED && which_layer >= BOTTOM_FN_LAYER) {
-						set_led_color_for_fn_layer(index, which_layer);
+						switch (kc) {
+						case KC_NO:
+							rgb_matrix_set_color(index, RGB_OFF);
+							break;
+						case SW_WIN:
+							rgb_matrix_set_color(index, WIN_YELLOW);
+							break;
+						case SW_DSC:
+							rgb_matrix_set_color(index, DSC_BLURPLE);
+							break;
+						default:
+							set_led_color_for_fn_layer(index, which_layer);
+							break;
+						}
 					}
 				}
 			}
 		}
-		for (uint8_t index = 67; index < 87; index++) {
-			set_led_color_for_fn_layer(index, highest_layer);
-		}
+		set_led_colors_for_fn_layer(67, 87, highest_layer);
 	} else {
 		set_led_color_for_fn_layer(59, highest_layer);
 	}
@@ -212,11 +257,11 @@ KC_LCTL,	KC_A ,	KC_S   ,	KC_D,	KC_F,	KC_G,	KC_H  ,	KC_J,	KC_K   ,	KC_L  ,	KC_SCL
 KC_LSFT,	KC_Z ,	KC_X   ,	KC_C,	KC_V,	KC_B,	KC_N  ,	KC_M,	KC_COMM,	KC_DOT,	KC_SLSH,	KC_RSFT,            	KC_UP  ,	KC_PGDN,
 KC_LALT,	LT_FN,	KC_LGUI,	     	     	     	KC_SPC,	     	        	       	KC_RGUI,	KC_RALT,	KC_LEFT,	KC_DOWN,	KC_RGHT),
 	[WIN] = LAYOUT(
-KC_GRV ,	KC_1 ,	KC_2   ,	KC_3,	KC_4,	KC_5,	KC_6  ,	KC_7,	KC_8   ,	KC_9  ,	KC_0   ,	KC_MINS,	KC_EQL ,	KC_BSPC,	KC_ESC,
-KC_TAB ,	KC_Q ,	KC_W   ,	KC_E,	KC_R,	KC_T,	KC_Y  ,	KC_U,	KC_I   ,	KC_O  ,	KC_P   ,	KC_LBRC,	KC_RBRC,	KC_BSLS,	KC_DEL,
-KC_LCTL,	KC_A ,	KC_S   ,	KC_D,	KC_F,	KC_G,	KC_H  ,	KC_J,	KC_K   ,	KC_L  ,	KC_SCLN,	KC_QUOT,	KC_ENT ,	        	KC_PGUP,
-KC_LSFT,	KC_Z ,	KC_X   ,	KC_C,	KC_V,	KC_B,	KC_N  ,	KC_M,	KC_COMM,	KC_DOT,	KC_SLSH,	KC_RSFT,            	KC_UP  ,	KC_PGDN,
-KC_LGUI,	LT_FN,	KC_LALT,	     	     	     	KC_SPC,	     	        	       	KC_RALT,	KC_RCTL,	KC_LEFT,	KC_DOWN,	KC_RGHT),
+_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,
+_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,
+_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,            	_______,
+_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	        	_______,	_______,
+KC_LGUI,	LT_FN  ,	KC_LALT,	        	        	        	_______,	        	        	        	KC_RALT,	KC_RCTL,	_______,	_______,	_______),
 	[DSC] = LAYOUT(
 _______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,
 _______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	KC_F20 ,
@@ -225,22 +270,22 @@ _______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,
 KC_F23 ,	_______,	_______,	        	        	        	_______,	        	        	        	_______,	_______,	_______,	_______,	_______),
 	[HFN] = LAYOUT(
 _______,	KC_F1  ,	KC_F2  ,	KC_F3  ,	KC_F4  ,	KC_F5  ,	KC_F6  ,	KC_F7  ,	KC_F8  ,	KC_F9  ,	KC_F10  ,	KC_F11 ,	KC_F12 ,	_______,	_______,
-_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	KC_INS ,
+C(KC_TAB),	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	KC_INS ,
 _______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,            	KC_HOME,
 _______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	        	_______,	KC_END ,
-_______,	_______,	_______,	        	        	        	_______,	        	        	        	_______,	_______,	_______,	_______,	_______),
+_______,	LT_FN  ,	_______,	        	        	        	_______,	        	        	        	_______,	_______,	_______,	_______,	_______),
 	[TFN] = LAYOUT(
-XXXXXXX,	KC_F1  ,	KC_F2  ,	KC_F3  ,	KC_F4  ,	KC_F5  ,	KC_F6  ,	KC_F7  ,	KC_F8  ,	KC_F9  ,	KC_F10  ,	KC_F11 ,	KC_F12 ,	XXXXXXX,	TG(TFN),
+XXXXXXX,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	XXXXXXX,	TG(TFN),
 XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	KC_VOLD,	KC_VOLU,	KC_MUTE,	XXXXXXX,
 XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	KC_BRID,	KC_BRIU,	XXXXXXX,            	XXXXXXX,
 XXXXXXX,	RGB_TOG,	RGB_MOD,	RGB_HUI,	RGB_SAI,	RGB_VAI,	XXXXXXX,	XXXXXXX,	KC_MPRV,	KC_MNXT,	KC_MPLY,	XXXXXXX,	        	XXXXXXX,	XXXXXXX,
 XXXXXXX,	MF_SFN ,	XXXXXXX,	        	        	        	XXXXXXX,	        	        	        	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX),
 	[SFN] = LAYOUT(
 QK_BOOT,	KC_F13 ,	KC_F14 ,	KC_F15 ,	KC_F16 ,	KC_F17 ,	KC_F18 ,	KC_F19 ,	KC_F20 ,	KC_F21 ,	KC_F22 ,	KC_F23 ,	KC_F24 ,	_______,	_______,
-_______,	_______,	TG(WIN),	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	KC_PSCR,
-KC_CAPS,	_______,	_______,	TG(DSC),	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,            	KC_SCRL,
+_______,	_______,	SW_WIN ,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	KC_PSCR,
+KC_CAPS,	_______,	_______,	SW_DSC ,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,            	KC_SCRL,
 _______,	TG_FOV ,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	        	_______,	KC_PAUS,
-_______,	_______,	_______,	        	        	        	_______,	        	        	        	_______,	_______,	_______,	_______,	_______),
+_______,	MF_SFN ,	_______,	        	        	        	_______,	        	        	        	_______,	_______,	_______,	_______,	_______),
 	[31] = LAYOUT(
 _______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,
 _______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,
