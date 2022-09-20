@@ -20,6 +20,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 static const int FN_COLORS[TOP_FN_LAYER - BOTTOM_FN_LAYER + 1][3] = {
     { DSC_BLURPLE },
     { HFN_COLOR },
+    { HFN_COLOR },
+    { TFN_COLOR },
     { TFN_COLOR },
     { SFN_COLOR }
 };
@@ -30,8 +32,8 @@ static uint16_t fn_layer_tap_timer = 0;
 static uint16_t idle_timer = 0;
 // Minutes elapsed (for tracking when to shut off the lights).
 static uint8_t idle_minutes_elapsed = 0;
-// Whether the RGB matrix has been disabled by the idle timer.
-static bool rgb_matrix_idled = false;
+/* // Whether the RGB matrix has been disabled by the idle timer. */
+/* static bool rgb_matrix_idled = false; */
 // Whether RGB function layer overlays are enabled.
 static bool rgb_fn_overlay = true;
 
@@ -73,7 +75,6 @@ void set_led_colors_for_fn_layer(uint8_t start, uint8_t end, uint8_t layer) {
 void reset_idle_timer(void) {
 	idle_timer = timer_read();
 	idle_minutes_elapsed = 0;
-	rgb_matrix_idled = false;
 }
 
 // // Run very early (before USB is started). Primarily for initing hardware.
@@ -87,13 +88,13 @@ void keyboard_post_init_user(void) {
 
 // Run every matrix scan (as often as possible).
 void matrix_scan_user(void) {
-	if (timer_elapsed(idle_timer) > 60000) {
+	if (timer_elapsed(idle_timer) > 60000 && rgb_matrix_is_enabled()) {
 		// Reset the idle timer.
 		idle_timer = timer_read();
-		if (idle_minutes_elapsed >= RGB_TIMEOUT && !rgb_matrix_idled) {
+		if (idle_minutes_elapsed >= RGB_TIMEOUT) {
 			// It is time to turn the matrix off.
 			rgb_matrix_disable_noeeprom();
-			rgb_matrix_idled = true;
+			idle_minutes_elapsed = 0;
 		} else {
 			idle_minutes_elapsed++;
 		}
@@ -103,15 +104,17 @@ void matrix_scan_user(void) {
 // // Run after all QMK processing.
 // void housekeeping_task_user(void) {}
 
-// Run repeatedly while system board is idled.
-void suspend_power_down_user(void) {
-	rgb_matrix_set_suspend_state(true);
-}
+/* // Run repeatedly while system board is idled. */
+/* void suspend_power_down_user(void) { */
+/* 	/1* rgb_matrix_disable_noeeprom(); *1/ */
+/* 	rgb_matrix_set_suspend_state(true); */
+/* } */
 
-// Run on keyboard wakeup.
-void suspend_wakeup_init_user(void) {
-	rgb_matrix_set_suspend_state(false);
-}
+/* // Run on keyboard wakeup. */
+/* void suspend_wakeup_init_user(void) { */
+/* 	/1* rgb_matrix_enable_noeeprom(); *1/ */
+/* 	rgb_matrix_set_suspend_state(false); */
+/* } */
 
 // // Run whenever the layer changes.
 layer_state_t layer_state_set_user(layer_state_t state) {
@@ -123,88 +126,67 @@ void disable_fn_layers(void) {
 	layer_and(((layer_state_t)1 << WIN) | ((layer_state_t)1 << DSC));
 }
 
-// Send a different string in Windows vs macOS mode.
-void send_string_win_mac(const char *win_str, const char *mac_str) {
-	if (IS_LAYER_ON(WIN)) {
-		send_string_P(win_str);
-	} else {
-		send_string_P(mac_str);
-	}
-}
-#define SS_WM(win, mac) send_string_win_mac(PSTR(win), PSTR(mac))
+/* // Send a different string in Windows vs macOS mode. */
+/* void send_string_win_mac(const char *win_str, const char *mac_str) { */
+/* 	if (IS_LAYER_ON(WIN)) { */
+/* 		send_string_P(win_str); */
+/* 	} else { */
+/* 		send_string_P(mac_str); */
+/* 	} */
+/* } */
+/* #define SS_WM(win, mac) send_string_win_mac(PSTR(win), PSTR(mac)) */
 
-// Send a basic keyboard shortcut that has shared letter btw windows and mac.
-#define SBS_WM(shortcut) SS_WM(SS_LCTL(shortcut), SS_LGUI(shortcut))
+/* // Send a basic keyboard shortcut that has shared letter btw windows and mac. */
+/* #define SBS_WM(shortcut) SS_WM(SS_LCTL(shortcut), SS_LGUI(shortcut)) */
 
 // Run whenever a key is pressed or released, before the key event is handled. 
 // Returns true if QMK should handle the key event normally. 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 	if (record->event.pressed) {
-		// key pressed
-		if (rgb_matrix_idled) rgb_matrix_enable_noeeprom();
+		/* // key pressed */
+		/* if (rgb_matrix_idled) rgb_matrix_enable_noeeprom(); */
+		if (!rgb_matrix_is_enabled()) rgb_matrix_enable_noeeprom();
 		reset_idle_timer();
 
 		switch (keycode) {
 		case LT_FN:
 			fn_layer_tap_timer = timer_read();
 			layer_on(HFN);
+			if (IS_LAYER_ON(WIN)) layer_on(HFN_WIN);
 			break;
 		case MF_SFN:
 			layer_on(SFN);
+			break;
+		case FN_CTRL: // When held, disable the function layers and leave the ctrl modifier down.
+			disable_fn_layers();
+			register_code(KC_LCTL);
 			break;
 		}
 	} else {
 		// key released
 		switch (keycode) {
+		case TG_FOV:
+			rgb_fn_overlay = !rgb_fn_overlay;
+			break;
+		case FN_CTRL:
+			unregister_code(KC_LCTL);
+			break;
 		case LT_FN:
 			if (timer_elapsed(fn_layer_tap_timer) < TAPPING_TERM) {
 				layer_on(TFN);
+				if (IS_LAYER_ON(WIN)) layer_on(TFN_WIN);
 				break;
 			}
 			// fall through
 		case MF_SFN:
+		case ESC_FN:
 			disable_fn_layers();
 			break;
-		case TG_FOV:
-			rgb_fn_overlay = !rgb_fn_overlay;
+		// Don't disable function layer when changing volume.
+		case KC_VOLU:
+		case KC_VOLD:
 			break;
-		case KC_SELECT:
-			SBS_WM("a");
-			break;
-		case KC_UNDO:
-			SBS_WM("z");
-			break;
-		case KC_CUT:
-			SS_WM(SS_TAP(X_DEL)SS_LCTL(SS_TAP(X_INS)), SS_LGUI("x"));
-			break;
-		case KC_COPY:
-			SS_WM(SS_LCTL(SS_TAP(X_INS)), SS_LGUI("c"));
-			break;
-		case KC_PASTE:
-			SS_WM(SS_LSFT(SS_TAP(X_INS)), SS_LGUI("v"));
-			disable_fn_layers();
-			break;
-		case REDO:
-			SS_WM(SS_LCTL("r"), SS_LGUI(SS_LSFT("z")));
-			break;
-		case CLOSE:
-			SS_WM(SS_LCTL(SS_TAP(X_F4)), SS_LGUI("w"));
-			disable_fn_layers();
-			break;
-		case QUIT:
-			SS_WM(SS_LALT(SS_TAP(X_F4)), SS_LGUI("q"));
-			disable_fn_layers();
-			break;
-		case SW_NEXT:
-			// Next desktop.
-			SS_WM(SS_LGUI(SS_TAP(X_RIGHT)), SS_LCTL(SS_TAP(X_RIGHT)));
-			break;
-		case SW_PREV:
-			// Previous desktop.
-			SS_WM(SS_LGUI(SS_TAP(X_LEFT)), SS_LCTL(SS_TAP(X_LEFT)));
-			break;
-		case KC_EXEC:
-			SS_WM(SS_TAP(X_LGUI), SS_LGUI(" "));
+		default:
 			disable_fn_layers();
 			break;
 		}
@@ -294,9 +276,9 @@ KC_LALT,	LT_FN,	KC_LGUI,	     	     	     	KC_SPC,	     	        	       	KC_RGU
 	[WIN] = LAYOUT(
 _______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,
 _______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,
-_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,            	_______,
+LT_FN  ,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,            	_______,
 _______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	        	_______,	_______,
-KC_LGUI,	LT_FN  ,	KC_LALT,	        	        	        	_______,	        	        	        	KC_RALT,	KC_RCTL,	_______,	_______,	_______),
+KC_LCTL,	KC_LGUI,	KC_LALT,	        	        	        	_______,	        	        	        	KC_RALT,	KC_RCTL,	_______,	_______,	_______),
 	[DSC] = LAYOUT(
 _______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,
 _______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	KC_F20 ,
@@ -309,18 +291,30 @@ C(KC_TAB),	_______,	_______,	_______,	_______,	_______,	_______,	_______,	______
 _______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,            	KC_HOME,
 _______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	        	_______,	KC_END ,
 _______,	LT_FN  ,	_______,	        	        	        	_______,	        	        	        	_______,	KC_APP ,	_______,	_______,	_______),
+	[HFN_WIN] = LAYOUT(
+XXXXXXX,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______ ,	_______,	_______,	XXXXXXX,	KC_ESC ,
+XXXXXXX,	XXXXXXX,	XXXXXXX,	KC_END ,	G(S(KC_G)),	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	_______,
+LT_FN  ,	KC_HOME,	G(KC_G),	KC_DEL ,	KC_PGDN,	XXXXXXX,	KC_BSPC,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,            	_______,
+KC_LSFT,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	KC_PGUP,	KC_DOWN,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	KC_RSFT,	        	XXXXXXX,	_______,
+KC_LCTL,	KC_LGUI,	KC_LALT,	        	        	        	XXXXXXX,	        	        	        	KC_RALT,	_______,	XXXXXXX,	XXXXXXX,	XXXXXXX),
 	[TFN] = LAYOUT(
-XXXXXXX,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	XXXXXXX,	MF_SFN,
-_______,	QUIT   ,	CLOSE  ,	XXXXXXX,	REDO   ,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	KC_VOLD,	KC_VOLU,	KC_MUTE,	XXXXXXX,
-XXXXXXX,	KC_SELECT,	XXXXXXX,	XXXXXXX,	KC_FIND,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	KC_BRID,	KC_BRIU,	XXXXXXX,	        	SW_PREV,
-_______,	KC_UNDO,	KC_CUT ,	KC_COPY,	KC_PASTE,	XXXXXXX,	XXXXXXX,	XXXXXXX,	KC_MPRV,	KC_MNXT,	KC_MPLY,	_______,	        	XXXXXXX,	SW_NEXT,
-XXXXXXX,	MF_SFN ,	XXXXXXX,	        	        	        	KC_EXEC,	        	        	        	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX),
+XXXXXXX,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	XXXXXXX,	ESC_FN,
+C(KC_F4),	G(KC_Q),	G(KC_W),	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	KC_VOLD,	KC_VOLU,	KC_MUTE,	XXXXXXX,
+FN_CTRL,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	KC_BRID,	KC_BRIU,	_______,	        	XXXXXXX,
+_______,	XXXXXXX,	G(KC_X),	G(KC_C),	G(KC_V),	XXXXXXX,	XXXXXXX,	XXXXXXX,	KC_MPRV,	KC_MNXT,	KC_MPLY,	_______,	        	_______,	XXXXXXX,
+_______,	MF_SFN ,	XXXXXXX,	        	        	        	XXXXXXX,	        	        	        	C(KC_F3),	C(KC_F2),	_______,	_______,	_______),
+	[TFN_WIN] = LAYOUT(
+_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,
+A(KC_ESC),	A(KC_F4),	C(KC_F4),	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,
+_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	        	_______,
+_______,	_______,	S(KC_DEL),	C(KC_INS),	S(KC_INS),	_______,	_______,	_______,	_______,	_______,	_______,	_______,	        	_______,	_______,
+_______,	MF_SFN ,	_______,	        	        	        	_______,	        	        	        	KC_RGUI,	KC_RALT,	_______,	_______,	_______),
 	[SFN] = LAYOUT(
 QK_BOOT,	KC_F13 ,	KC_F14 ,	KC_F15 ,	KC_F16 ,	KC_F17 ,	KC_F18 ,	KC_F19 ,	KC_F20 ,	KC_F21 ,	KC_F22 ,	KC_F23       ,	KC_F24       ,	_______,	KC_SLEP,
-S(_______),	TG_FOV ,	SW_WIN ,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	S(A(KC_VOLD)),	S(A(KC_VOLU)),	_______,	KC_PSCR,
+_______,	TG_FOV ,	SW_WIN ,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	S(A(_______)),	S(A(_______)),	_______,	KC_PSCR,
 KC_CAPS,	_______,	_______,	SW_DSC ,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______      ,	_______      ,	        	KC_SCRL,
 _______,	RGB_TOG,	RGB_MOD,	RGB_HUI,	RGB_SAI,	RGB_VAI,	_______,	_______,	_______,	_______,	_______,	_______      ,	              	_______,	KC_PAUS,
-_______,	MF_SFN ,	_______,	        	        	        	_______,	        	        	        	_______,	_______      ,	_______      ,	_______,	_______),
+_______,	MF_SFN ,	_______,	        	        	        	_______,	        	        	        	QK_RBT ,	_______      ,	_______      ,	_______,	_______),
 	[31] = LAYOUT(
 _______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,
 _______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,

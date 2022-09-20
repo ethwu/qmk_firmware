@@ -25,10 +25,14 @@ enum Layers {
 	DSC,
 	// Function layer on FN hold.
 	HFN,
+	// Utility layer for Windows.
+	HFN_WIN,
 	// Function layer on FN tap.
 	TFN,
+	// Replacement functions for Windows.
+	TFN_WIN,
 	// Function layer on FN held after tap.
-	SFN
+	SFN,
 };
 
 enum Keycodes {
@@ -37,10 +41,10 @@ enum Keycodes {
 	// Momentarily activate SFN while held and deactivate both FN and SFN when
 	// released.
 	MF_SFN,
-	// // Toggle the Windows layer.
-	// SW_WIN,
-	// // Toggle the Discord layer.
-	// SW_DSC,
+	// Deactivate the function layers.
+	ESC_FN,
+	// Leave function layers and hold control.
+	FN_CTRL,
 	REDO,
 	CLOSE,
 	QUIT,
@@ -75,11 +79,12 @@ enum Keycodes {
 
 // Function layer colors.
 
+#define UTIL_COLOR 0xff, 0xb5, 0x11
 #define HFN_COLOR 0x00, 0xb0, 0xda
 #define TFN_COLOR RGB_CHARTREUSE
 #define SFN_COLOR 0xe4, 0x4c, 0x9a
 
 // Timeout for RGB lights in minutes.
-#define RGB_TIMEOUT 10
+#define RGB_TIMEOUT 1
 
 // vim: noexpandtab
