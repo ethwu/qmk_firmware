@@ -185,6 +185,8 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 		// Don't disable function layer when changing volume.
 		case KC_VOLU:
 		case KC_VOLD:
+		case KC_BRIU:
+		case KC_BRID:
 			break;
 		default:
 			disable_fn_layers();
