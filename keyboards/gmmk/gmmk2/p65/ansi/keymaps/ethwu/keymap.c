@@ -278,9 +278,9 @@ KC_LALT,	LT_FN,	KC_LGUI,	     	     	     	KC_SPC,	     	        	       	KC_RGU
 	[WIN] = LAYOUT(
 _______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,
 _______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,
-LT_FN  ,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,            	_______,
+KC_LCTL,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,            	_______,
 _______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	        	_______,	_______,
-KC_LCTL,	KC_LGUI,	KC_LALT,	        	        	        	_______,	        	        	        	KC_RALT,	KC_RCTL,	_______,	_______,	_______),
+KC_LGUI,	LT_FN,	KC_LALT,	        	        	        	_______,	        	        	        	KC_RALT,	KC_RCTL,	_______,	_______,	_______),
 	[DSC] = LAYOUT(
 _______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,
 _______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	KC_F20 ,
@@ -296,9 +296,9 @@ _______,	LT_FN  ,	_______,	        	        	        	_______,	        	        
 	[HFN_WIN] = LAYOUT(
 XXXXXXX,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______ ,	_______,	_______,	XXXXXXX,	KC_ESC ,
 XXXXXXX,	XXXXXXX,	XXXXXXX,	KC_END ,	G(S(KC_G)),	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	_______,
-LT_FN  ,	KC_HOME,	G(KC_G),	KC_DEL ,	KC_PGDN,	XXXXXXX,	KC_BSPC,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,            	_______,
+KC_LCTL,	KC_HOME,	G(KC_G),	KC_DEL ,	KC_PGDN,	XXXXXXX,	KC_BSPC,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,            	_______,
 KC_LSFT,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	KC_PGUP,	KC_DOWN,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	KC_RSFT,	        	XXXXXXX,	_______,
-KC_LCTL,	KC_LGUI,	KC_LALT,	        	        	        	XXXXXXX,	        	        	        	KC_RALT,	_______,	XXXXXXX,	XXXXXXX,	XXXXXXX),
+KC_LCTL,	LT_FN  ,	KC_LALT,	        	        	        	XXXXXXX,	        	        	        	KC_RALT,	_______,	XXXXXXX,	XXXXXXX,	XXXXXXX),
 	[TFN] = LAYOUT(
 XXXXXXX,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	_______,	XXXXXXX,	ESC_FN,
 C(KC_F4),	G(KC_Q),	G(KC_W),	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	XXXXXXX,	KC_VOLD,	KC_VOLU,	KC_MUTE,	XXXXXXX,
