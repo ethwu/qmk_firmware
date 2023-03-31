@@ -79,10 +79,15 @@ enum Keycodes {
 
 // Function layer colors.
 
-#define UTIL_COLOR 0xff, 0xb5, 0x11
-#define HFN_COLOR 0x00, 0xb0, 0xda
-#define TFN_COLOR RGB_CHARTREUSE
-#define SFN_COLOR 0xe4, 0x4c, 0x9a
+// #define UTIL_COLOR 0xff, 0xb5, 0x11
+// #define HFN_COLOR 0x00, 0xb0, 0xda
+// #define TFN_COLOR RGB_CHARTREUSE
+// #define SFN_COLOR 0xe4, 0x4c, 0x9a
+
+// alternate color palette
+#define HFN_COLOR 0xEF, 0x56, 0x45
+#define TFN_COLOR 0xfe, 0xbc, 0x11
+#define SFN_COLOR 0x00, 0x36, 0x60
 
 // Timeout for RGB lights in minutes.
 #define RGB_TIMEOUT 1
