@@ -60,7 +60,11 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 };
 
 #if defined(ENCODER_MAP_ENABLE)
+<<<<<<< HEAD
 const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
+=======
+const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][2] = {
+>>>>>>> 339804ef1dabca4a8fa9c41518d59ed7143ae3aa
     [MAC_BASE] = {ENCODER_CCW_CW(KC_VOLD, KC_VOLU) },
     [MAC_FN]   = {ENCODER_CCW_CW(RGB_VAD, RGB_VAI) },
     [WIN_BASE] = {ENCODER_CCW_CW(KC_VOLD, KC_VOLU) },
